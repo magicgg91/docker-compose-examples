@@ -1,0 +1,52 @@
+version: "3.8"
+services:
+  influxdb:
+    image: influxdb
+    container_name: influxdb
+    restart: always
+    hostname: influxdb
+    environment:
+      INFLUX_DB: $INFLUX_DB
+      INFLUXDB_USER: $INFLUXDB_USER
+      INFLUXDB_USER_PASSWORD: $INFLUXDB_USER_PASSWORD
+    volumes:
+      - ./influxdb:/var/lib/influxdb
+
+  telegraf:
+    image: telegraf
+    depends_on:
+      - influxdb
+    container_name: telegraf
+    restart: always
+    links:
+      - influxdb:influxdb
+    tty: true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf
+    privileged: true
+
+  grafana:
+    image: grafana/grafana
+    depends_on:
+      - influxdb
+    container_name: grafana
+    restart: always
+    ports:
+      - 13000:3000
+    environment:
+      - PUID:1000
+      - PGID:1000
+    links:
+      - influxdb:influxdb
+    environment:
+      GF_INSTALL_PLUGINS: "grafana-clock-panel,\
+                          grafana-influxdb-08-datasource,\
+                          grafana-kairosdb-datasource,\
+                          grafana-piechart-panel,\
+                          grafana-simple-json-datasource,\
+                          grafana-worldmap-panel"
+      GF_SECURITY_ADMIN_USER: $GF_SECURITY_ADMIN_USER
+      GF_SECURITY_ADMIN_PASSWORD: $GF_SECURITY_ADMIN_PASSWORD
+    volumes:
+      - ./grafana:/var/lib/grafana
